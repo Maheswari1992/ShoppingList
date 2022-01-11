@@ -27,6 +27,9 @@ func InitCache() {
 		log.Error(err)
 		time.Sleep(5 * time.Second)
 	}
+	if err != nil {
+		log.Fatal("Redis connection failed")
+	}
 	log.Info("Connection to Redis established")
 	cache = conn
 }
