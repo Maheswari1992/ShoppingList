@@ -38,6 +38,29 @@ func (s *SignupController) AddUser(context *gin.Context) {
 	newUser.UserID = inputUser.UserID
 	newUser.Email = inputUser.Email
 	newUser.Name = inputUser.Name
+
+	routerPassword := gin.Default()
+	routerPassword.POST("/", func(c *gin.Context) {
+		if !util.VerifyPassword(inputUser.Password) {
+			log.Error("Error creating user for user id:", newUser.UserID, " Password is not valid")
+			context.JSON(http.StatusConflict, gin.H{
+				"status":  http.StatusConflict,
+				"message": "Password Must contain at least one number and one uppercase and lowercase letter, and at least 8 or more characters",
+			})
+			return
+		}
+	})
+	go routerPassword.Run(":9596") // Password services
+
+	if !util.VerifyPassword(inputUser.Password) {
+		log.Error("Error creating user for user id:", newUser.UserID, " Not a Valid Password")
+		context.JSON(http.StatusConflict, gin.H{
+			"status":  http.StatusConflict,
+			"message": "Password Must contain at least one number and one uppercase and lowercase letter, and at least 8 or more characters",
+		})
+		return
+	}
+
 	encryptedPassword, err := util.HashPassword(inputUser.Password)
 	if err != nil {
 		log.Error("Error creating user for user id:", newUser.UserID, err.Error())
@@ -57,6 +80,7 @@ func (s *SignupController) AddUser(context *gin.Context) {
 		})
 		return
 	}
+
 	//create account if new user
 	err = userWrapper.Insert(&newUser)
 	if err != nil {
@@ -168,4 +192,37 @@ func (s *SignupController) Logout(context *gin.Context) {
 		"status":  http.StatusOK,
 		"message": "User successfully logged out",
 	})
+}
+
+func (s *SignupController) Password(context *gin.Context) {
+	//take the input
+	inputUser := struct {
+		UserID   string `json:"user_id"`
+		Name     string `json:"name"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}{}
+
+	if err := context.BindJSON(&inputUser); err != nil {
+		log.Error("Error parsing json input while registering the user", err.Error())
+		context.JSON(http.StatusBadRequest, gin.H{
+			"status":  http.StatusBadRequest,
+			"message": "Error is request body",
+		})
+		return
+	}
+	//if the user already exists
+	var newUser model.User
+	newUser.UserID = inputUser.UserID
+	newUser.Email = inputUser.Email
+	newUser.Name = inputUser.Name
+
+	if !util.VerifyPassword(inputUser.Password) {
+		log.Error("Error creating user for user id:", newUser.UserID, "User already exists")
+		context.JSON(http.StatusConflict, gin.H{
+			"status":  http.StatusConflict,
+			"message": "Password Must contain at least one number and one uppercase and lowercase letter, and at least 8 or more characters",
+		})
+		return
+	}
 }

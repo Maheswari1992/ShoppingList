@@ -123,4 +123,5 @@ func main() {
 	port := viper.GetInt("webserver.port")
 	log.Info("Port", port, "Starting web server")
 	router.Run(fmt.Sprintf(":%d", port))
+
 }
